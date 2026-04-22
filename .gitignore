@@ -1,3 +1,16 @@
+# User Added:
+CLAUDE.md
+NOTES.md
+jobs/
+logs/
+
+# Project data and outputs
+data/
+activations/
+*.memmap
+progress.json
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

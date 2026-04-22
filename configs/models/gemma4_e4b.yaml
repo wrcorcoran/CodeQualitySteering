@@ -1,0 +1,6 @@
+model_name: gemma4_e4b
+hf_id: google/gemma-4-E4B-it
+n_layers: 42
+d_model: null  # read from model config at load time
+batch_size: 8
+load_in_8bit: false

@@ -1,0 +1,6 @@
+model_name: llama3.1_8b
+hf_id: meta-llama/Llama-3.1-8B-Instruct
+n_layers: 32
+d_model: 4096
+batch_size: 8
+load_in_8bit: false

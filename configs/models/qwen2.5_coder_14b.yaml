@@ -1,0 +1,6 @@
+model_name: qwen2.5_coder_14b
+hf_id: Qwen/Qwen2.5-Coder-14B-Instruct
+n_layers: 48
+d_model: 5120
+batch_size: 4
+load_in_8bit: false
