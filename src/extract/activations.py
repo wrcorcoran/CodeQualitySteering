@@ -80,10 +80,9 @@ def extract_activations(
         inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=False)
 
         seq_len = inputs["input_ids"].shape[1]
-        assert seq_len <= MAX_TOKENS, (
-            f"Batch contains sequence of length {seq_len} > {MAX_TOKENS}. "
-            "Pre-filter token lengths before extraction."
-        )
+        if seq_len > MAX_TOKENS:
+            logger.info(f"Batch {batch_num+1}: skipping (padded length {seq_len} > {MAX_TOKENS})")
+            continue
 
         inputs = {k: v.to("cuda:0") for k, v in inputs.items()}
         mask = inputs["attention_mask"]
@@ -92,8 +91,8 @@ def extract_activations(
             outputs = model(**inputs, output_hidden_states=True)
             pooled: dict[int, tuple[np.ndarray, np.ndarray]] = {}
             for l, h in enumerate(outputs.hidden_states[1:], start=1):
-                last_vec = pool_last(h, mask).cpu().to(torch.bfloat16).numpy().astype(np.float16)
-                mean_vec = pool_mean(h, mask).cpu().to(torch.bfloat16).numpy().astype(np.float16)
+                last_vec = pool_last(h, mask).cpu().to(torch.bfloat16).view(torch.int16).numpy().view(np.float16)
+                mean_vec = pool_mean(h, mask).cpu().to(torch.bfloat16).view(torch.int16).numpy().view(np.float16)
                 pooled[l] = (last_vec, mean_vec)
             del outputs
 

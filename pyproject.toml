@@ -16,12 +16,14 @@ dependencies = [
     "loguru>=0.7.3",
     "numpy>=2.4.4",
     "packaging>=26.1",
+    "pillow>=12.2.0",
     "pyarrow>=24.0.0",
     "pydantic>=2",
     "pyyaml>=6.0.3",
     "radon>=6.0.1",
     "safetensors>=0.7.0",
-    "torch>=2.11.0",
+    "torch==2.11.0+cu126",
+    "torchvision==0.26.0+cu126",
     "tqdm>=4.67.3",
     "transformers>=5.5.4",
     "typer>=0.24.1",
@@ -31,6 +33,15 @@ dependencies = [
 int8 = [
     "bitsandbytes>=0.49.2",
 ]
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cu126"
+name = "pytorch-cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+torchvision = { index = "pytorch-cu126" }
 
 [dependency-groups]
 dev = [
