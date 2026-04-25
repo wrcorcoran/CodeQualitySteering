@@ -1,0 +1,10 @@
+{
+  "shards": [
+    {
+      "path": "data/processed/stackv2_python/shard_0000.parquet",
+      "row_count": 38654
+    }
+  ],
+  "total_rows": 38654,
+  "schema_version": 1
+}

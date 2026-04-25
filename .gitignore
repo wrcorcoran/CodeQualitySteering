@@ -5,7 +5,7 @@ jobs/
 logs/
 
 # Project data and outputs
-data/
+./data/
 activations/
 *.memmap
 progress.json

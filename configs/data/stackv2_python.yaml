@@ -1,0 +1,9 @@
+dataset_id: TempestTeam/dataset-the-stack-v2-dedup-sub
+dataset_name: Python
+pull_count: 50000
+min_chars: 50
+max_chars: 7000
+max_tokens: 2048
+seed: 42
+output_dir: data/processed/stackv2_python
+shard_size_mb: 100
