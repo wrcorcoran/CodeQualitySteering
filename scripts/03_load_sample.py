@@ -17,8 +17,10 @@ import json
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import PCA
 
 DATASET_DIR = Path("data/processed/stackv2_python")
 METRICS_COLS = ["id", "cc", "mi", "comment_ratio", "h_volume", "h_difficulty", "h_effort", "sloc"]
@@ -76,11 +78,59 @@ def load_layer(
 
     return vecs, df
 
+def compute_pca(
+        vecs: np.ndarray,
+        df: pd.DataFrame,
+        plot_path: str,
+) -> pd.DataFrame:
+    """
+    Reduces the dimensionality of the activations to 2 using principal component analysis. For each element of
+    METRICS_COLS, excluding the id, saves a scatter plot to plot_path/<metric>.svg of the activations along the
+    first two principal components, colored by by the metric.
+    Returns:
+        df: DataFrame [N_valid] with columns:
+            id, pc_0, pc_1, cc, mi, comment_ratio, h_volume, h_difficulty, h_effort, sloc
+    """
+    plot_dir = Path(plot_path)
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    coords = PCA(n_components=2).fit_transform(vecs.astype(np.float32))  # [N, 2]
+
+    metric_cols = [c for c in METRICS_COLS if c != "id"]
+    result = df[["id"] + metric_cols].copy().reset_index(drop=True)
+    result["pc_0"] = coords[:, 0]
+    result["pc_1"] = coords[:, 1]
+
+    for metric in metric_cols:
+        raw = result[metric].to_numpy(dtype=np.float32)
+        raw_min = raw.min()
+        log_vals = np.log1p(raw - raw_min)  # shift so minimum is 0 before log
+
+        metric_dir = plot_dir / metric
+        metric_dir.mkdir(parents=True, exist_ok=True)
+
+        variants = [
+            (raw,      metric,              "raw"),
+            (log_vals, f"log1p({metric})",  "log"),
+        ]
+        for vals, label, filename in variants:
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sc = ax.scatter(result["pc_0"], result["pc_1"], c=vals, cmap="viridis", s=1, alpha=0.5)
+            plt.colorbar(sc, ax=ax, label=label)
+            ax.set_xlabel("PC 1")
+            ax.set_ylabel("PC 2")
+            ax.set_title(label)
+            fig.savefig(metric_dir / f"{filename}.png", dpi=150)
+            plt.close(fig)
+
+    return result[["id", "pc_0", "pc_1"] + metric_cols]
+
 
 if __name__ == "__main__":
     activations_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("activations/llama3.1_8b")
     layer = int(sys.argv[2]) if len(sys.argv) > 2 else 16
     pool = sys.argv[3] if len(sys.argv) > 3 else "mean"
+    plot_path = sys.argv[4] if len(sys.argv) > 4 else "plots"
 
     print(f"Loading {activations_dir.name}  layer={layer}  pool={pool}")
     vecs, df = load_layer(activations_dir, layer, pool)
@@ -94,3 +144,8 @@ if __name__ == "__main__":
     print(np.linalg.norm(vecs[:5].astype(np.float32), axis=1))
     print(f"\nMetric ranges:")
     print(df[["cc", "mi", "comment_ratio", "h_volume", "h_difficulty", "h_effort", "sloc"]].describe())
+
+    print(f"\nRunning PCA, saving plots to {plot_path}/")
+    result = compute_pca(vecs, df, plot_path)
+    print(f"PCA result: {result.shape}")
+    print(result[["id", "pc_0", "pc_1", "cc", "mi"]].head(5).to_string(index=False))
