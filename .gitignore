@@ -220,3 +220,6 @@ marimo/_lsp/
 __marimo__/
 
 /plots
+
+# jupyter notebooks
+/*.ipynb

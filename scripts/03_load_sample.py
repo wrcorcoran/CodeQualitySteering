@@ -109,19 +109,41 @@ def compute_pca(
         metric_dir = plot_dir / metric
         metric_dir.mkdir(parents=True, exist_ok=True)
 
-        variants = [
-            (raw,      metric,              "raw"),
-            (log_vals, f"log1p({metric})",  "log"),
-        ]
-        for vals, label, filename in variants:
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sc = ax.scatter(result["pc_0"], result["pc_1"], c=vals, cmap="viridis", s=1, alpha=0.5)
-            plt.colorbar(sc, ax=ax, label=label)
-            ax.set_xlabel("PC 1")
-            ax.set_ylabel("PC 2")
-            ax.set_title(label)
-            fig.savefig(metric_dir / f"{filename}.png", dpi=150)
-            plt.close(fig)
+        # variants = [
+        #     (raw,      metric,              "raw"),
+        #     (log_vals, f"log1p({metric})",  "log"),
+        # ]
+        # for vals, label, filename in variants:
+        #     fig, ax = plt.subplots(figsize=(8, 6))
+        #     sc = ax.scatter(result["pc_0"], result["pc_1"], c=vals, cmap="viridis", s=1, alpha=0.5)
+        #     plt.colorbar(sc, ax=ax, label=label)
+        #     ax.set_xlabel("PC 1")
+        #     ax.set_ylabel("PC 2")
+        #     ax.set_title(label)
+        #     fig.savefig(metric_dir / f"{filename}.png", dpi=150)
+        #     plt.close(fig)
+
+        p5 = np.percentile(raw, 5)
+        p95 = np.percentile(raw, 95)
+        bottom_mask = raw <= p5
+        top_mask = raw >= p95
+        pct_mask = bottom_mask | top_mask
+
+        pct_x = result["pc_0"].to_numpy()[pct_mask]
+        pct_y = result["pc_1"].to_numpy()[pct_mask]
+        pct_labels = np.where(bottom_mask[pct_mask], "bottom 5%", "top 5%")
+
+        colors = {"bottom 5%": "steelblue", "top 5%": "tomato"}
+        fig, ax = plt.subplots(figsize=(8, 6))
+        for group, color in colors.items():
+            sel = pct_labels == group
+            ax.scatter(pct_x[sel], pct_y[sel], c=color, label=group, s=4, alpha=0.6)
+        ax.legend(title=metric, markerscale=3)
+        ax.set_xlabel("PC 1")
+        ax.set_ylabel("PC 2")
+        ax.set_title(f"{metric} — bottom/top 5th percentile")
+        fig.savefig(metric_dir / "percentile_only.png", dpi=150)
+        plt.close(fig)
 
     return result[["id", "pc_0", "pc_1"] + metric_cols]
 
