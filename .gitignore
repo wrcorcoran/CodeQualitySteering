@@ -3,6 +3,7 @@ CLAUDE.md
 NOTES.md
 jobs/
 logs/
+probes/
 
 # Project data and outputs
 /data/**

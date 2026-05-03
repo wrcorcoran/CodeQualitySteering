@@ -29,6 +29,7 @@ dependencies = [
     "tqdm>=4.67.3",
     "transformers>=5.5.4",
     "typer>=0.24.1",
+    "scienceplots>=2.2.1",
 ]
 
 [project.optional-dependencies]
