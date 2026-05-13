@@ -120,7 +120,7 @@ def _print_comparison(probes_root: Path) -> None:
 
 def main(
     probe_dir: Path = typer.Argument(..., help="Path to probe output dir, e.g. probes/llama3.1_8b"),
-    figures_dir: Path = typer.Option(Path("figures"), help="Root directory for saved plots"),
+    figures_dir: Path = typer.Option(Path("figures/probes/"), help="Root directory for saved plots"),
     compare: bool = typer.Option(False, "--compare", help="Print cross-model comparison using sibling dirs"),
 ) -> None:
     df = load_results(probe_dir)

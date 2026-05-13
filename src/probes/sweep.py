@@ -7,20 +7,11 @@ import pandas as pd
 from loguru import logger
 
 from src.probes.ridge import ProbeResult, fit_probe
+from src.utils.io import boundary_mask, load_metrics_dataset
 
 METRICS = ["cc", "mi", "comment_ratio", "h_volume", "h_difficulty", "h_effort", "sloc"]
 POOLS = ["last", "mean"]
 DATASET_DIR = Path("data/processed/stackv2_python")
-
-
-def _load_dataset(dataset_dir: Path) -> pd.DataFrame:
-    shards = sorted(dataset_dir.glob("shard_*.parquet"))
-    assert shards, f"No parquet shards found in {dataset_dir}"
-    cols = ["id"] + METRICS
-    return pd.concat(
-        [pd.read_parquet(p, columns=cols) for p in shards],
-        ignore_index=True,
-    )
 
 
 def _load_index(activations_dir: Path) -> pd.DataFrame:
@@ -44,7 +35,7 @@ def sweep_model(
     n_layers: int = meta["n_layers"]
 
     index = _load_index(activations_dir)
-    dataset = _load_dataset(dataset_dir)
+    dataset = load_metrics_dataset(dataset_dir, cols=["id"] + METRICS)
 
     df = index.merge(dataset, on="id", how="left")
     assert len(df) == len(index), "id join changed row count — dataset and activations may be out of sync"
@@ -70,9 +61,10 @@ def sweep_model(
 
             for metric in METRICS:
                 y = df[metric].to_numpy(dtype=np.float32)
+                interior = boundary_mask(y)
 
-                row_train = valid_mask & train_mask
-                row_test = valid_mask & test_mask
+                row_train = valid_mask & train_mask & interior
+                row_test = valid_mask & test_mask & interior
 
                 X_train = vecs[row_train]
                 y_train = y[row_train]

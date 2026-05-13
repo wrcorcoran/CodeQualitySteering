@@ -4,6 +4,7 @@ NOTES.md
 jobs/
 logs/
 probes/
+metric_boundaries.txt
 
 # Project data and outputs
 /data/**

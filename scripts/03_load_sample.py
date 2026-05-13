@@ -22,6 +22,8 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 
+from src.utils.io import load_metrics_dataset
+
 DATASET_DIR = Path("data/processed/stackv2_python")
 METRICS_COLS = ["id", "cc", "mi", "comment_ratio", "h_volume", "h_difficulty", "h_effort", "sloc"]
 
@@ -47,12 +49,7 @@ def load_layer(
     index = pd.read_parquet(activations_dir / "index.parquet")
 
     # load metrics from parquet shards; split lives in index, not needed from shards
-    shards = sorted(DATASET_DIR.glob("shard_*.parquet"))
-    assert shards, f"No parquet shards found in {DATASET_DIR}"
-    dataset = pd.concat(
-        [pd.read_parquet(p, columns=METRICS_COLS) for p in shards],
-        ignore_index=True,
-    )
+    dataset = load_metrics_dataset(DATASET_DIR, cols=METRICS_COLS)
 
     # left join so row order matches the memmap exactly
     df = index.merge(dataset, on="id", how="left")
