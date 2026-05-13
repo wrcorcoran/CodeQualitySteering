@@ -3,7 +3,7 @@ CLAUDE.md
 NOTES.md
 jobs/
 logs/
-probes/
+/probes/**
 metric_boundaries.txt
 
 # Project data and outputs

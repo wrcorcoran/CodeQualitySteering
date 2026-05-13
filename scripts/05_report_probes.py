@@ -31,20 +31,20 @@ def _plot_metric(
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax2 = ax1.twinx()
 
-    ax1.plot(layers, r2, color="steelblue", marker="o", markersize=3, label="R² test")
+    ax1.plot(layers, r2, color="steelblue", marker="o", markersize=3, label="R^2 test")
     ax2.plot(layers, norms, color="tomato", marker="s", markersize=3, linestyle="--", label="weight norm")
 
     ax1.set_xlabel("Layer")
-    ax1.set_ylabel("R² test", color="steelblue")
+    ax1.set_ylabel("R^2 test", color="steelblue")
     ax2.set_ylabel("Weight L2 norm", color="tomato")
     ax1.tick_params(axis="y", labelcolor="steelblue")
     ax2.tick_params(axis="y", labelcolor="tomato")
-    ax1.set_title(f"{probe_dir.name} · {pool} · {metric}")
+    ax1.set_title(f"Linear Probes Over Time ({probe_dir.name}, {pool} pooling, {metric})")
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper center",
-               bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=8, frameon=True)
+               bbox_to_anchor=(0.5, -0.09), ncol=2, fontsize=8, frameon=True)
 
     out_path = figures_dir / probe_dir.name / pool / f"{metric}.png"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -68,9 +68,9 @@ def _plot_all_metrics(
         ax.plot(layers, r2, marker="o", markersize=3, color=colors[i], label=metric)
 
     ax.set_xlabel("Layer")
-    ax.set_ylabel("R² test")
-    ax.set_title(f"{probe_dir.name} · {pool} · all metrics")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(METRICS),
+    ax.set_ylabel("R^2 test")
+    ax.set_title(f"Linear Probes Over Time ({probe_dir.name}, {pool} pooling, all metrics)")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.09), ncol=len(METRICS),
               fontsize=8, frameon=True)
 
     out_path = figures_dir / probe_dir.name / pool / "all_metrics.png"
@@ -115,7 +115,7 @@ def _print_comparison(probes_root: Path) -> None:
                 (all_df["metric"] == metric)
             ]
             best_layer = int(model_df.sort_values("r2_test", ascending=False).iloc[0]["layer"])
-            print(f"  {metric:<16}  {winner['model']:<24}  R²={winner['r2_test']:.3f}  (layer={best_layer})")
+            print(f"  {metric:<16}  {winner['model']:<24}  R^2={winner['r2_test']:.3f}  (layer={best_layer})")
 
 
 def main(
@@ -133,14 +133,14 @@ def main(
         if df_pool.empty:
             continue
 
-        print(f"\nR² test scores — {probe_dir.name}  pool={pool}\n")
+        print(f"\nR^2 test scores — {probe_dir.name}  pool={pool}\n")
         pivot = df_pool.pivot(index="layer", columns="metric", values="r2_test")[METRICS]
         print(pivot.to_string())
 
-        print(f"\nBest layer per metric (R² test):\n")
+        print(f"\nBest layer per metric (R^2 test):\n")
         for metric in METRICS:
             best = df_pool[df_pool["metric"] == metric].sort_values("r2_test", ascending=False).iloc[0]
-            print(f"  {metric:<16}  layer={int(best['layer']):>2}  R²={best['r2_test']:.3f}")
+            print(f"  {metric:<16}  layer={int(best['layer']):>2}  R^2={best['r2_test']:.3f}")
 
         print(f"\nSaving plots to {figures_dir / probe_dir.name / pool}/")
         _plot_all_metrics(df_pool, probe_dir, pool, figures_dir)
