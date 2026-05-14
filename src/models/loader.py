@@ -30,7 +30,7 @@ class LoadedModel:
 def load_model(cfg: ModelConfig) -> LoadedModel:
     load_kwargs: dict[str, Any] = dict(
         dtype=torch.bfloat16,  # type: ignore[attr-defined]
-        attn_implementation="flash_attention_2",
+        attn_implementation="sdpa",
         device_map="cuda:0",
         use_cache=False,
     )

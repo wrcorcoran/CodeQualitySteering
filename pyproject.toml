@@ -9,7 +9,7 @@ packages = ["src"]
 name = "cs291a-project"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "accelerate>=1.13.0",
     "datasets>=4.8.4",
@@ -30,12 +30,16 @@ dependencies = [
     "transformers>=5.5.4",
     "typer>=0.24.1",
     "scienceplots>=2.2.1",
+    "steering-vectors",
 ]
 
 [project.optional-dependencies]
 int8 = [
     "bitsandbytes>=0.49.2",
 ]
+
+[tool.uv]
+override-dependencies = ["transformers>=5.5.4"]
 
 [[tool.uv.index]]
 url = "https://download.pytorch.org/whl/cu126"
