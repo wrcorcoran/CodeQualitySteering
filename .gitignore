@@ -5,6 +5,8 @@ jobs/
 logs/
 /probes/**
 metric_boundaries.txt
+bcb_results/
+bcb_results_clean/
 
 # Project data and outputs
 /data/**

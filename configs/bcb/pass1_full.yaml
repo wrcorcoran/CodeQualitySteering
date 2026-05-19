@@ -1,0 +1,51 @@
+subset: full
+n_samples: 1
+temperature: 0.0
+batch_size: 128
+p: 10
+
+runs:
+  - name: pass1_full_llama_base
+    model: llama3.1_8b
+
+  - name: pass1_full_llama_comment_ratio
+    model: llama3.1_8b
+    metric: comment_ratio
+    layer: 30
+    alpha_sweep: [-1.0, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1.0]
+
+  - name: pass1_full_llama_mi
+    model: llama3.1_8b
+    metric: mi
+    layer: 30
+    alpha_sweep: [-1.0, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1.0]
+
+  - name: pass1_full_gemma_base
+    model: gemma2_9b
+
+  - name: pass1_full_gemma_comment_ratio
+    model: gemma2_9b
+    metric: comment_ratio
+    layer: 30
+    alpha_sweep: [-2.0, -1.5, -1.0, -0.5, 0.5, 1.0, 1.5, 2.0]
+
+  - name: pass1_full_gemma_mi
+    model: gemma2_9b
+    metric: mi
+    layer: 30
+    alpha_sweep: [-2.0, -1.5, -1.0, -0.5, 0.5, 1.0, 1.5, 2.0]
+
+  - name: pass1_full_qwen_base
+    model: qwen2.5_coder_14b
+
+  - name: pass1_full_qwen_comment_ratio
+    model: qwen2.5_coder_14b
+    metric: comment_ratio
+    layer: 38
+    alpha_sweep: [-2.5, 2.5, -5.0, 5.0, -7.5, 7.5, -10.0, 10.0]
+
+  - name: pass1_full_qwen_mi
+    model: qwen2.5_coder_14b
+    metric: mi
+    layer: 38
+    alpha_sweep: [-2.5, 2.5, -5.0, 5.0, -7.5, 7.5, -10.0, 10.0]

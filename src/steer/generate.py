@@ -66,6 +66,7 @@ def generate(
     p: int = 25,
     max_new_tokens: int = 2048,
     batch_size: int = 8,
+    temperature: float = 0.0,
 ) -> list[dict]:
     model = loaded.model
     tokenizer = loaded.tokenizer
@@ -76,12 +77,15 @@ def generate(
         for metric, layer, alpha in steerings
     ]
 
-    steer_meta = [{"metric": m, "layer": l, "alpha": a} for m, l, a in steerings]
+    steer_meta = [{"metric": m, "layer": layer, "alpha": a} for m, layer, a in steerings]
     operator = _generation_only()
+    do_sample = temperature > 0.0
     results = []
 
     for batch_start in range(0, len(tasks), batch_size):
         batch = tasks[batch_start : batch_start + batch_size]
+
+        print(f"Size of batch: {len(batch)}, expected: {batch_size}", flush=True)
 
         prompts = []
         for task in batch:
@@ -94,7 +98,18 @@ def generate(
         inputs = tokenizer(
             prompts, return_tensors="pt", padding=True, truncation=False
         ).to(model.device)
-        prompt_len = inputs["input_ids"].shape[1]
+        prompt_len = inputs["input_ids"].shape[1]  # type: ignore[union-attr]
+
+        gen_kwargs: dict = {
+            "max_new_tokens": max_new_tokens,
+            "do_sample": do_sample,
+            "pad_token_id": tokenizer.pad_token_id,
+        }
+        if do_sample:
+            gen_kwargs["temperature"] = temperature
+        else:
+            gen_kwargs["temperature"] = None
+            gen_kwargs["top_p"] = None
 
         handles: list[SteeringPatchHandle] = [
             sv.patch_activations(model, multiplier=alpha, operator=operator)
@@ -102,21 +117,14 @@ def generate(
         ]
         try:
             with torch.no_grad():
-                output_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=False,
-                    temperature=None,
-                    top_p=None,
-                    pad_token_id=tokenizer.pad_token_id,
-                )
+                output_ids = model.generate(**inputs, **gen_kwargs)  # type: ignore[operator]
         finally:
             for h in handles:
                 h.remove()
 
         for i, task in enumerate(batch):
             new_ids = output_ids[i][prompt_len:]
-            raw_output = tokenizer.decode(new_ids, skip_special_tokens=True)
+            raw_output: str = tokenizer.decode(new_ids, skip_special_tokens=True)
             code = _extract_code(raw_output)
             metrics = _compute_metrics(code)
             results.append(
@@ -130,6 +138,9 @@ def generate(
                 }
             )
 
+        del inputs, output_ids
+        torch.cuda.empty_cache()
+
     return results
 
 
@@ -142,7 +153,9 @@ def run_sweep(
     sv_dir: Path = Path("data/steering_vectors"),
     p: int = 25,
     max_new_tokens: int = 2048,
-    batch_size: int = 8,
+    batch_size: int = 64,
+    n_samples: int = 1,
+    temperature: float = 0.0,
 ) -> list[dict]:
     all_results = []
 
@@ -153,17 +166,21 @@ def run_sweep(
 
         for config in steering_configs:
             label = config if config else "baseline"
-            logger.info(f"  Running {model_name} | steering={label}")
-            results = generate(
-                loaded,
-                tasks,
-                config,
-                sv_dir=sv_dir,
-                p=p,
-                max_new_tokens=max_new_tokens,
-                batch_size=batch_size,
-            )
-            all_results.extend(results)
+            logger.info(f"  Running {model_name} | steering={label} | n_samples={n_samples}")
+            for sample_idx in range(n_samples):
+                results = generate(
+                    loaded,
+                    tasks,
+                    config,
+                    sv_dir=sv_dir,
+                    p=p,
+                    max_new_tokens=max_new_tokens,
+                    batch_size=batch_size,
+                    temperature=temperature,
+                )
+                for r in results:
+                    r["generation_id"] = sample_idx
+                all_results.extend(results)
 
         del loaded.model
         torch.cuda.empty_cache()

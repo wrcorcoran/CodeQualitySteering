@@ -1,0 +1,40 @@
+subset: full
+n_samples: 1
+temperature: 0.0
+limit: 64
+batch_size: 64
+p: 10
+
+runs:
+  - name: smoke_llama_base
+    model: llama3.1_8b
+
+  - name: smoke_llama_comment_ratio
+    model: llama3.1_8b
+    metric: comment_ratio
+    layer: 30
+    alpha_sweep: [-1.5, -1.0, -0.5, 0.5, 1.0, 1.5]
+
+  - name: smoke_gemma_base
+    model: gemma2_9b
+
+  # - name: smoke_gemma_comment_ratio
+  #   model: gemma2_9b
+  #   metric: comment_ratio
+  #   layer: 30
+  #   alpha_sweep: [-1.5, -1.0, -0.5, 0.5, 1.0, 1.5]
+
+  # - name: smoke_gemma_mi
+  #   model: gemma2_9b
+  #   metric: mi
+  #   layer: 30
+  #   alpha_sweep: [-1.5, -1.0, -0.5, 0.5, 1.0, 1.5]
+
+  - name: smoke_qwen_base
+    model: qwen2.5_coder_14b
+
+  - name: smoke_qwen_comment_ratio
+    model: qwen2.5_coder_14b
+    metric: comment_ratio
+    layer: 38
+    alpha_sweep: [-2.5, 2.5, -5.0, 5.0, -10.0, 10.0]

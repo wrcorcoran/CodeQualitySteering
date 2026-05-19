@@ -1,13 +1,11 @@
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
-
-if TYPE_CHECKING:
-    from src.models.loader import LoadedModel
-
+from bigcodebench.data import get_bigcodebench
+from src.data.metrics import CodeMetrics
 METRICS = ["cc", "mi", "comment_ratio", "h_volume", "h_difficulty", "h_effort", "sloc"]
 
 
@@ -19,7 +17,7 @@ def load_bigcodebench_tasks(
     assert split in {"instruct", "complete"}, f"Unsupported split: {split}"
     assert subset in {"hard", "full"}, f"Unsupported subset: {subset}"
 
-    from bigcodebench.data import get_bigcodebench
+    
 
     problems = get_bigcodebench(subset=subset)
     tasks = [problems[k] for k in sorted(problems)]
@@ -55,69 +53,8 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def generate_bigcodebench_samples(
-    loaded: "LoadedModel",
-    tasks: list[dict[str, Any]],
-    split: str,
-    n_samples: int,
-    temperature: float,
-    max_new_tokens: int,
-    output_path: Path,
-) -> None:
-    import torch
-    from tqdm import tqdm
-
-    model = loaded.model
-    tokenizer = loaded.tokenizer
-    do_sample = temperature > 0
-    rows: list[dict[str, Any]] = []
-
-    for task in tqdm(tasks, desc=f"Generating {loaded.cfg.model_name}"):
-        prompt = task_prompt(task, split)
-        model_input = _format_model_input(tokenizer, prompt, split)
-
-        for generation_id in range(n_samples):
-            inputs = tokenizer(model_input, return_tensors="pt", truncation=False).to(model.device)
-            input_len = inputs["input_ids"].shape[1]
-            generation_kwargs: dict[str, Any] = {
-                "do_sample": do_sample,
-                "max_new_tokens": max_new_tokens,
-                "pad_token_id": tokenizer.pad_token_id,
-                "eos_token_id": tokenizer.eos_token_id,
-            }
-            if do_sample:
-                generation_kwargs["temperature"] = temperature
-            with torch.no_grad():
-                generated = model.generate(
-                    **inputs,
-                    **generation_kwargs,
-                )
-
-            raw_solution = tokenizer.decode(generated[0, input_len:], skip_special_tokens=True)
-            solution = raw_solution if split == "instruct" else prompt + raw_solution
-            rows.append({
-                "task_id": task["task_id"],
-                "generation_id": generation_id,
-                "solution": solution,
-                "raw_solution": raw_solution,
-            })
-
-    write_jsonl(output_path, rows)
-
-
-def _format_model_input(tokenizer: Any, prompt: str, split: str) -> str:
-    if split == "instruct" and getattr(tokenizer, "chat_template", None):
-        return tokenizer.apply_chat_template(
-            [{"role": "user", "content": prompt}],
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-    return prompt
-
 
 def compute_quality_metrics(samples_path: Path, eval_results_path: Path | None = None) -> pd.DataFrame:
-    from src.data.metrics import CodeMetrics
-
     rows = read_jsonl(samples_path)
     pass_lookup = _load_pass_fail(eval_results_path) if eval_results_path else {}
     metric_rows: list[dict[str, Any]] = []

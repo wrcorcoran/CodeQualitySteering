@@ -32,6 +32,21 @@ dependencies = [
     "typer>=0.24.1",
     "scienceplots>=2.2.1",
     "steering-vectors",
+    "nltk>=3.9.4",
+    "scipy>=1.17.1",
+    "librosa>=0.11.0",
+    "soundfile>=0.13.1",
+    "pandas>=3.0.2",
+    "beautifulsoup4>=4.14.3",
+    "lxml>=6.1.1",
+    "requests>=2.33.1",
+    "sympy>=1.14.0",
+    "cvxpy>=1.8.2",
+    "seaborn>=0.13.2",
+    "chardet>=7.4.3",
+    "pytesseract>=0.3.13",
+    "statsmodels>=0.14.6",
+    "pytz>=2026.2",
 ]
 
 [project.optional-dependencies]
@@ -40,7 +55,10 @@ int8 = [
 ]
 
 [tool.uv]
-override-dependencies = ["transformers>=5.5.4"]
+override-dependencies = [
+    "transformers>=5.5.4",
+    "vllm; python_version == '2.7'",  # bigcodebench pulls vllm; we don't use it and it can't build
+]
 
 [[tool.uv.index]]
 url = "https://download.pytorch.org/whl/cu126"
