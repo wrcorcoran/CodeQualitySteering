@@ -1,24 +1,31 @@
 subset: full
 n_samples: 1
 temperature: 0.0
-batch_size: 128
+batch_size: 8
+max_new_tokens: 1280
 p: 10
 
 runs:
-  - name: pass1_full_llama_base
-    model: llama3.1_8b
+  # - name: pass1_full_llama_base
+  #   model: llama3.1_8b
 
-  - name: pass1_full_llama_comment_ratio
-    model: llama3.1_8b
-    metric: comment_ratio
-    layer: 30
-    alpha_sweep: [-1.0, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1.0]
+  # - name: pass1_full_llama_comment_ratio
+  #   model: llama3.1_8b
+  #   metric: comment_ratio
+  #   layer: 30
+  #   alpha_sweep: [-1.0, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1.0]
+
+  # - name: pass1_full_llama_mi
+  #   model: llama3.1_8b
+  #   metric: mi
+  #   layer: 30
+  #   alpha_sweep: [-1.0, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1.0]
 
   - name: pass1_full_llama_mi
     model: llama3.1_8b
     metric: mi
     layer: 30
-    alpha_sweep: [-1.0, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1.0]
+    alpha_sweep: [0.75, 1.0]
 
   - name: pass1_full_gemma_base
     model: gemma2_9b

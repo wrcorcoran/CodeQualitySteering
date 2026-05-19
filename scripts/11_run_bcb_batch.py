@@ -17,6 +17,10 @@ import torch
 import typer
 from loguru import logger
 
+torch.set_float32_matmul_precision("high")
+torch.backends.cuda.enable_flash_sdp(True)
+torch.backends.cuda.enable_mem_efficient_sdp(True)
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.eval.bigcodebench import load_bigcodebench_tasks, write_jsonl
@@ -54,7 +58,7 @@ def main(
     temperature: float = typer.Option(0.2, help="Sampling temperature"),
     limit: Optional[int] = typer.Option(None, help="Limit number of tasks"),
     batch_size: int = typer.Option(64, help="Generation batch size"),
-    max_new_tokens: int = typer.Option(2048, help="Max tokens to generate"),
+    max_new_tokens: int = typer.Option(1280, help="Max tokens to generate"),
     p: int = typer.Option(default=10, help="Steering vector percentile"),
 ) -> None:
     setup_logging()

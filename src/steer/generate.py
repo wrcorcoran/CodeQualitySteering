@@ -1,4 +1,5 @@
 import re
+import time
 from dataclasses import asdict
 from pathlib import Path
 
@@ -80,30 +81,46 @@ def generate(
     steer_meta = [{"metric": m, "layer": layer, "alpha": a} for m, layer, a in steerings]
     operator = _generation_only()
     do_sample = temperature > 0.0
+    model.generation_config.use_cache = True
+    logger.info(
+        f"use_cache={model.config.use_cache} | "
+        f"flash_sdp={torch.backends.cuda.flash_sdp_enabled()} | "
+        f"mem_eff_sdp={torch.backends.cuda.mem_efficient_sdp_enabled()} | "
+        f"math_sdp={torch.backends.cuda.math_sdp_enabled()}"
+    )
+
+    # Pre-tokenize and sort by prompt length to minimize padding waste per batch
+    all_prompts = []
+    for task in tasks:
+        messages = [{"role": "user", "content": task["instruct_prompt"]}]
+        all_prompts.append(tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True))
+    prompt_lengths = [len(tokenizer.encode(p)) for p in all_prompts]
+    sorted_indices = sorted(range(len(tasks)), key=lambda i: prompt_lengths[i])
+    tasks = [tasks[i] for i in sorted_indices]
+    all_prompts = [all_prompts[i] for i in sorted_indices]
+
     results = []
+    n_batches = (len(tasks) + batch_size - 1) // batch_size
 
     for batch_start in range(0, len(tasks), batch_size):
         batch = tasks[batch_start : batch_start + batch_size]
+        prompts = all_prompts[batch_start : batch_start + batch_size]
+        batch_idx = batch_start // batch_size
+        t0 = time.perf_counter()
 
-        print(f"Size of batch: {len(batch)}, expected: {batch_size}", flush=True)
-
-        prompts = []
-        for task in batch:
-            messages = [{"role": "user", "content": task["instruct_prompt"]}]
-            text = tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
-            prompts.append(text)
-
+        t_tok = time.perf_counter()
         inputs = tokenizer(
             prompts, return_tensors="pt", padding=True, truncation=False
         ).to(model.device)
         prompt_len = inputs["input_ids"].shape[1]  # type: ignore[union-attr]
+        t_tok = time.perf_counter() - t_tok
 
         gen_kwargs: dict = {
             "max_new_tokens": max_new_tokens,
             "do_sample": do_sample,
             "pad_token_id": tokenizer.pad_token_id,
+            "use_cache": True,
+
         }
         if do_sample:
             gen_kwargs["temperature"] = temperature
@@ -115,12 +132,17 @@ def generate(
             sv.patch_activations(model, multiplier=alpha, operator=operator)
             for sv, alpha in svs
         ]
+        t_gen = time.perf_counter()
         try:
             with torch.no_grad():
                 output_ids = model.generate(**inputs, **gen_kwargs)  # type: ignore[operator]
         finally:
             for h in handles:
                 h.remove()
+        t_gen = time.perf_counter() - t_gen
+
+        n_new_tokens = (output_ids[:, prompt_len:] != tokenizer.pad_token_id).sum().item()
+        tok_per_sec = n_new_tokens / t_gen if t_gen > 0 else 0
 
         for i, task in enumerate(batch):
             new_ids = output_ids[i][prompt_len:]
@@ -138,8 +160,16 @@ def generate(
                 }
             )
 
+        t_total = time.perf_counter() - t0
+        logger.info(
+            f"batch {batch_idx+1}/{n_batches} | prompt_len={prompt_len} "
+            f"| tok={t_tok:.2f}s gen={t_gen:.2f}s total={t_total:.2f}s "
+            f"| {tok_per_sec:.0f} new_tok/s"
+        )
+
         del inputs, output_ids
-        torch.cuda.empty_cache()
+        if batch_idx % 50 == 49:
+            torch.cuda.empty_cache()
 
     return results
 

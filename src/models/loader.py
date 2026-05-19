@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    BitsAndBytesConfig,
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
@@ -27,16 +28,16 @@ class LoadedModel:
     cfg: ModelConfig
 
 
-def load_model(cfg: ModelConfig) -> LoadedModel:
+def load_model(cfg: ModelConfig, use_cache: bool = True) -> LoadedModel:
     load_kwargs: dict[str, Any] = dict(
         dtype=torch.bfloat16,  # type: ignore[attr-defined]
         attn_implementation="sdpa",
         device_map="cuda:0",
-        use_cache=False,
+        use_cache=use_cache,
     )
 
     if cfg.load_in_8bit:
-        load_kwargs["load_in_8bit"] = True
+        load_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.hf_id)
     model = AutoModelForCausalLM.from_pretrained(cfg.hf_id, **load_kwargs)
